@@ -1,0 +1,151 @@
+:css
+  body { background-color: black; font-family: sans; font-size: 16px; }
+  .line { cursor: pointer; display: table; }
+  .line .nick { font-weight: bold; padding-right: 5px; margin-right: 5px; }
+  .line .msg { color: #eee; }
+
+  .sidebar { width: 120px; color: #fff; position: absolute; left: 0px; top: 0px; font-size: 10px; }
+  .chat { overflow-y: scroll; position: absolute; left: 120px; top: 0px; bottom: 0px; right: 0px; }
+
+  .thread-picker { cursor: pointer; }
+  .thread-picker h2 { color: #555; }
+
+  .thread-picker:hover { background-color: #222; }
+  .thread-picker.selected { background-color: #006; }
+  .thread-picker.selected h2 { color: #fff; }
+
+
+%script{src: "jquery-1.10.2.min.js"}
+%script{src: "jquery.easing.1.3.js"}
+/ %script{src: "underscore-min.js"}
+
+:coffeescript
+  $ ->
+
+    ##################################
+
+    lines = $(".line")
+
+    embiggen_css = {
+      "font-size": "16px",
+      "opacity": 1.0
+    }
+
+    shrink_css = {
+      "font-size": "10px",
+      "opacity": 0.5
+    }
+
+    animation_style = {
+      easing: "easeInOutBack", 
+      duration: 400
+    }
+
+    ##################################
+
+    this_thread_class = (e)->
+      num = $(e).data("thread")
+      ".thread-" + num
+
+    lines_in_thread = (n)->
+      lines.filter(".thread-"+n)
+
+    lines_not_in_thread = (n)->
+      lines.not(".thread-"+n)
+
+    select_thread = (n)->
+      console.log(selecting: n)
+      if $(".thread-"+n).first().hasClass("selected")
+        # embiggen everything
+        console.log "embiggening everything"
+        lines.removeClass("selected")
+        lines.animate embiggen_css, animation_style
+        select_picker()
+
+      else
+        select_picker(n)
+
+        bigger = lines_in_thread(n)
+        shrunk = lines_not_in_thread(n)
+
+        bigger.addClass("selected")
+        shrunk.removeClass("selected")
+
+        bigger.animate embiggen_css, animation_style
+        shrunk.animate shrink_css, animation_style
+
+    select_picker = (n)->
+      $(".sidebar .thread-picker").removeClass("selected")
+      if n?
+        $(".sidebar .thread-picker[data-thread="+n+"]").addClass("selected")
+
+
+    thread_num = (e)->
+      $(e).data("thread")
+
+    lines.click ->
+      select_thread(thread_num(this))
+
+    $(".thread-picker").click ->
+      select_thread(thread_num(this))
+
+    ##################################
+
+    highlight_thread = (e)->
+      if $(this).hasClass("shrunk")
+        lines_in_thread(e).css("background-color": "#555")
+        lines_not_in_thread(e).css("background-color": "#000")
+
+    unhighlight_all = ->
+      lines.css("background-color": "#000")
+
+    #lines.mouseover ->
+    #  highlight_thread(this)
+
+    #lines.mouseout ->
+    #  unhighlight_all()
+
+    update_sidebar = ->
+      threads = []
+
+      lines.each (i, line)->
+        nick = $(line).children(".nick").text()
+        thread = $(line).data("thread")
+        (threads[thread] or= []).push(nick)
+
+      sidebar = $(".sidebar")
+      sidebar.html("")
+
+      _.each threads, (nicks, thread_num) ->
+        nicks = _.uniq(nicks)
+
+        console.log(nicks: nicks, num: thread_num)
+        sidebar.append("<h2>thread " + thread_num + "</h2>")
+
+        sidebar.append("<ul>")
+
+        _.each nicks, (nick) ->
+          sidebar.append("<li>" + nick + "</li>")
+
+        sidebar.append("</ul>")
+
+    # update_sidebar()
+
+
+.sidebar
+  - log.group_by(&:thread).sort.each do |thread_num, lines|
+
+    .thread-picker{data: {thread: thread_num}}
+      %h2 thread #{thread_num}
+      - nicks = lines.map(&:nick).uniq
+
+      - for nick in nicks
+        %li{style: "color: #{nickcolors[nick]}"}= nick
+
+
+.chat
+  - for line in log
+    .line{data: {thread: line.thread}, class: "thread-#{line.thread}"}
+      %span.nick{style: "color: #{nickcolors[line.nick]}"}= line.nick
+      %span.msg= line.msg
+
