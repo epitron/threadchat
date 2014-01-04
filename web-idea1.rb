@@ -70,5 +70,5 @@ colors = %w[#8f8 #f0f #ff0 #88f #f88]
 
 get "/" do
   nickcolors = Hash[log.group_by(&:nick).keys.zip(colors)]
-  haml "index-idea1", locals: {log: log, nickcolors: nickcolors}
+  haml :index_idea1, locals: {log: log, nickcolors: nickcolors}
 end
